@@ -9,6 +9,8 @@ def create_dwh_run(
         run_name="DAILY_DWH",
         run_type="FULL"):
 
+    """ Ustvari zapis v META.DWH_RUN in vrne RUN_ID. """
+
     conn = get_sqlserver_connection()
     cursor = conn.cursor()
 
@@ -16,17 +18,13 @@ def create_dwh_run(
     INSERT INTO META.DWH_RUN
     (
         RUN_NAME,
-        RUN_TYPE,
-        STATUS,
-        START_TS
+        RUN_TYPE
     )
     OUTPUT INSERTED.RUN_ID
     VALUES
     (
         ?,
-        ?,
-        'RUNNING',
-        SYSDATETIME()
+        ?
     )
     """
 
@@ -46,22 +44,28 @@ def create_dwh_run(
 def finish_dwh_run(
         run_id,
         status="SUCCESS",
+        error_message=None,
         dbt_invocation_id=None):
+    
+    """ Dokonča DWH run s statusom SUCCESS in posodobi njegove podatke. """
 
     conn = get_sqlserver_connection()
     cursor = conn.cursor()
 
     sql = """
+    DECLARE @end_ts DATETIME2 = SYSDATETIME();
+
     UPDATE META.DWH_RUN
-       SET STATUS = ?,
-           END_TS = SYSDATETIME(),
-           DURATION_SEC =
-               DATEDIFF(
-                   SECOND,
-                   START_TS,
-                   SYSDATETIME()
-               ),
-           DBT_INVOCATION_ID = ?
+    SET STATUS = ?,
+        END_TS = @end_ts,
+        DURATION_SEC =
+            DATEDIFF(
+                SECOND,
+                START_TS,
+                @end_ts
+            ),
+           DBT_INVOCATION_ID = ?,
+           ERROR_MESSAGE = ?
      WHERE RUN_ID = ?
     """
 
@@ -69,6 +73,7 @@ def finish_dwh_run(
         sql,
         status,
         dbt_invocation_id,
+        error_message,
         run_id
     )
 
@@ -81,32 +86,119 @@ def finish_dwh_run(
 
 def fail_dwh_run(
         run_id,
-        error_message):
+        error_message,
+        dbt_invocation_id=None):
+
+    """ Dokonča DWH run s statusom FAILED in posodobi njegove podatke. """
+    
+    finish_dwh_run(
+        run_id=run_id,
+        status="FAILED",
+        error_message=error_message,
+        dbt_invocation_id=dbt_invocation_id
+    )
+
+
+
+def start_object_run(
+        run_id,
+        object_layer,
+        object_name):
+    
+    """ 
+    Ustvari zapis v META.DWH_RUN_OBJECT in vrne RUN_OBJECT_ID. 
+    """
 
     conn = get_sqlserver_connection()
     cursor = conn.cursor()
 
     sql = """
-    UPDATE META.DWH_RUN
-       SET STATUS = 'FAILED',
-           END_TS = SYSDATETIME(),
-           DURATION_SEC =
-               DATEDIFF(
-                   SECOND,
-                   START_TS,
-                   SYSDATETIME()
-               ),
-           ERROR_MESSAGE = ?
-     WHERE RUN_ID = ?
+    INSERT INTO META.DWH_RUN_OBJECT
+    (
+        RUN_ID,
+        OBJECT_LAYER,
+        OBJECT_NAME
+    )
+    OUTPUT INSERTED.RUN_OBJECT_ID
+    VALUES
+    (
+        ?,
+        ?,
+        ?
+    )
     """
 
     cursor.execute(
         sql,
+        run_id,
+        object_layer,
+        object_name
+    )
+
+    run_object_id = cursor.fetchone()[0]
+
+    conn.commit()
+
+    cursor.close()
+    conn.close()
+
+    return run_object_id
+
+
+
+def finish_object_run(
+        run_object_id,
+        status="SUCCESS",
+        row_count=None,
+        error_message=None):
+    """
+    Zaključi objekt_run in posodobi njegove podatke.
+    """
+
+    conn = get_sqlserver_connection()
+    cursor = conn.cursor()
+
+    sql = """
+    DECLARE @end_ts DATETIME2 = SYSDATETIME();
+
+    UPDATE META.DWH_RUN_OBJECT
+       SET STATUS = ?,
+           END_TS = @end_ts,
+           DURATION_SEC =
+               DATEDIFF(
+                   SECOND,
+                   START_TS,
+                   @end_ts
+               ),
+           ROW_COUNT = ?,
+           ERROR_MESSAGE = ?
+     WHERE RUN_OBJECT_ID = ?
+    """
+
+    cursor.execute(
+        sql,
+        status,
+        row_count,
         error_message,
-        run_id
+        run_object_id
     )
 
     conn.commit()
 
     cursor.close()
     conn.close()
+
+
+
+def fail_object_run(
+        run_object_id,
+        error_message):
+    """
+    Zaključi objekt_run s statusom FAILED.
+    """
+
+    finish_object_run(
+        run_object_id=run_object_id,
+        status="FAILED",
+        error_message=error_message
+    )
