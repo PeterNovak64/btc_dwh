@@ -7,7 +7,7 @@ from lib.run import (
     finish_dwh_run
 )
 
-run_id = create_dwh_run("test_run")
+run_id = create_dwh_run("test_run", "FULL")
 
 print(f"RUN_ID = {run_id}")
 

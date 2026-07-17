@@ -1,14 +1,13 @@
 #
 #   scripts/lib/run.py
 #
-#
-# scripts/lib/run.py
-#
 
 from lib.db import get_sqlserver_connection
 
 
-def create_dwh_run(run_type="FULL"):
+def create_dwh_run(
+        run_name="DAILY_DWH",
+        run_type="FULL"):
 
     conn = get_sqlserver_connection()
     cursor = conn.cursor()
@@ -16,6 +15,7 @@ def create_dwh_run(run_type="FULL"):
     sql = """
     INSERT INTO META.DWH_RUN
     (
+        RUN_NAME,
         RUN_TYPE,
         STATUS,
         START_TS
@@ -24,12 +24,13 @@ def create_dwh_run(run_type="FULL"):
     VALUES
     (
         ?,
+        ?,
         'RUNNING',
         SYSDATETIME()
     )
     """
 
-    cursor.execute(sql, run_type)
+    cursor.execute(sql, run_name, run_type)
 
     run_id = cursor.fetchone()[0]
 
