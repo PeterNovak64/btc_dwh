@@ -57,17 +57,19 @@ def main():
             run_type="DBT"
         )
 
-        print(f"RUN_ID = {run_id}")
+        #print(f"RUN_ID = {run_id}")
 
         # Execute dbt
         run_dbt(run_id)
 
         # Process run_results.json
-        process_run_results(
+        stats = process_run_results(
             connection=connection,
             run_id=run_id,
-            results_file=Path("target/run_results.json")
+            results_file="target/run_results.json"
         )
+
+        #print(stats)
 
         # Finish run
         finish_run(
@@ -76,7 +78,7 @@ def main():
             status="SUCCESS"
         )
 
-        print("RUN SUCCESS")
+        #print("RUN SUCCESS")
 
     except Exception as ex:
 

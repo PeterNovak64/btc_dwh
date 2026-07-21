@@ -51,3 +51,5 @@ models:
     +pre-hook:
       - "{{ start_object_run() }}"
 
+    +post-hook:
+      - "{{ update_object_row_count() }}"

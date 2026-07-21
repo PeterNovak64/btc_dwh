@@ -76,9 +76,6 @@ def extract_result_data(result):
             .split(".")
         )
 
-        print("relation_name =", repr(relation_name))
-        print("parts =", parts)
-
         # BTCDWH02_TEST.LAND.tsppica_users
         if len(parts) >= 2:
             object_layer = parts[1].upper()
@@ -181,7 +178,7 @@ def update_object_result(
        SET END_TS        = ?,
            DURATION_SEC  = ?,
            STATUS        = ?,
-           ROW_COUNT     = ?,
+           ROW_COUNT     = COALESCE(?, ROW_COUNT),
            ERROR_MESSAGE = ?
      WHERE RUN_ID        = ?
        AND OBJECT_LAYER  = ?
@@ -202,8 +199,6 @@ def update_object_result(
 
     cursor = connection.cursor()
 
-    print(params)
-
     try:
         #print(params)
 
@@ -211,8 +206,7 @@ def update_object_result(
 
         rows_updated = cursor.rowcount
 
-        print("ROWS_UPDATED =", cursor.rowcount)
-
+        #print("ROWS_UPDATED =", cursor.rowcount)
 
         if rows_updated == 0:
             raise RuntimeError(
@@ -254,16 +248,12 @@ def process_run_results(
 
         result_data = extract_result_data(result)
 
-        print()
-        print("DEBUG result_data:")
-        print(result_data)
-
-        print(
-            f"RUN_ID={run_id}, "
-            f"LAYER={result_data['object_layer']}, "
-            f"OBJECT={result_data['object_name']}, "
-            f"STATUS={result_data['status']}"
-        )
+        #print(
+        #    f"RUN_ID={run_id}, "
+        #    f"LAYER={result_data['object_layer']}, "
+        #    f"OBJECT={result_data['object_name']}, "
+        #    f"STATUS={result_data['status']}"
+        #)
 
         update_object_result(
             connection,
