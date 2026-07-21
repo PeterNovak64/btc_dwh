@@ -202,3 +202,68 @@ def fail_object_run(
         status="FAILED",
         error_message=error_message
     )
+
+
+
+def start_run(connection, run_type="DBT"):
+    """
+    Ustvari zapis v META.DWH_RUN
+    in vrne RUN_ID.
+    """
+
+    cursor = connection.cursor()
+
+    try:
+
+        cursor.execute(
+            """
+            EXEC META.start_run
+                 @run_type = ?
+            """,
+            run_type
+        )
+
+        row = cursor.fetchone()
+
+        if row is None:
+            raise RuntimeError(
+                "META.start_run ni vrnila RUN_ID"
+            )
+
+        run_id = row[0]
+
+        connection.commit()
+
+        return run_id
+
+    finally:
+        cursor.close()
+
+
+
+def finish_run(
+        connection,
+        run_id,
+        status):
+    """
+    Zaključi izvajanje v META.DWH_RUN.
+    """
+
+    cursor = connection.cursor()
+
+    try:
+
+        cursor.execute(
+            """
+            EXEC META.finish_run
+                 @run_id = ?,
+                 @status = ?
+            """,
+            run_id,
+            status
+        )
+
+        connection.commit()
+
+    finally:
+        cursor.close()

@@ -48,3 +48,6 @@ models:
       +schema: MART
       +materialized: table
 
+    +pre-hook:
+      - "{{ start_object_run() }}"
+
