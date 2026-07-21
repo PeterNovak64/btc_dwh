@@ -10,109 +10,98 @@ orchestrator.py
 Glavni orchestrator za dbt izvajanje.
 """
 
-import json
-import subprocess
 from pathlib import Path
+import subprocess
+
+from lib.db import get_sqlserver_connection
 
 from lib.run import (
-    start_dwh_run,
-    finish_dwh_run,
-    fail_dwh_run
+    start_run,
+    finish_run
 )
 
-from lib.insert_results import process_run_results
-# ali kamorkoli boš dal to logiko
+from lib.insert_results import (
+    process_run_results
+)
 
 
+def run_dbt(run_id):
 
-def run_dbt():
+    cmd = [
+        "dbt",
+        "run",
+        "--vars",
+        f"{{run_id: {run_id}}}"
+    ]
 
-    cmd = ["dbt", "run"]
-
-    result = subprocess.run(
+    return subprocess.run(
         cmd,
         check=True,
         text=True,
         capture_output=True
     )
 
-    return result
-
-
-
-def load_run_results():
-
-    path = Path("target/run_results.json")
-
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-
-def calculate_final_status(run_results):
-
-    for result in run_results["results"]:
-
-        if result["status"] not in (
-            "success",
-            "skipped"
-        ):
-            return "FAILED"
-
-    return "SUCCESS"
-
-
 
 def main():
 
+    connection = None
     run_id = None
 
     try:
 
-        run_id = start_dwh_run(
-            run_type="FULL",
-            initiated_by="SQL_AGENT"
+        connection = get_sqlserver_connection()
+
+        # Start run
+        run_id = start_run(
+            connection=connection,
+            run_type="DBT"
         )
 
-        run_dbt()
+        print(f"RUN_ID = {run_id}")
 
-        run_results = load_run_results()
+        # Execute dbt
+        run_dbt(run_id)
 
+        # Process run_results.json
         process_run_results(
-            run_id,
-            run_results
+            connection=connection,
+            run_id=run_id,
+            results_file=Path("target/run_results.json")
         )
 
-        final_status = calculate_final_status(
-            run_results
+        # Finish run
+        finish_run(
+            connection=connection,
+            run_id=run_id,
+            status="SUCCESS"
         )
 
-        if final_status == "SUCCESS":
-
-            finish_dwh_run(
-                run_id=run_id,
-                status="SUCCESS"
-            )
-
-        else:
-
-            fail_dwh_run(
-                run_id=run_id,
-                error_message="One or more dbt models failed"
-            )
+        print("RUN SUCCESS")
 
     except Exception as ex:
 
-        if run_id:
+        print(f"ERROR: {ex}")
 
-            fail_dwh_run(
-                run_id=run_id,
-                error_message=str(ex)
-            )
+        # Mark run as failed
+        if connection and run_id:
+
+            try:
+
+                finish_run(
+                    connection=connection,
+                    run_id=run_id,
+                    status="FAILED"
+                )
+
+            except Exception:
+                pass
 
         raise
 
+    finally:
 
+        if connection:
+            connection.close()
 
 
 if __name__ == "__main__":
