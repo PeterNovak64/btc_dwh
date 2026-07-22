@@ -244,6 +244,8 @@ def process_run_results(
         "cancelled": 0
     }
 
+    first_error = None
+
     for result in results:
 
         result_data = extract_result_data(result)
@@ -254,6 +256,11 @@ def process_run_results(
         #    f"OBJECT={result_data['object_name']}, "
         #    f"STATUS={result_data['status']}"
         #)
+
+        if ( result_data["status"] == "FAILED"
+                and first_error is None):
+
+            first_error = result_data["error_message"]
 
         update_object_result(
             connection,
@@ -280,5 +287,8 @@ def process_run_results(
         elif status == "CANCELLED":
             stats["cancelled"] += 1
 
-    return stats
+    return {
+        "stats": stats, 
+        "first_error": first_error
+    }
 

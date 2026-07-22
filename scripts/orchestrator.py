@@ -46,6 +46,7 @@ def main():
 
     connection = None
     run_id = None
+    dbt_failed = False
 
     try:
 
@@ -57,28 +58,55 @@ def main():
             run_type="DBT"
         )
 
-        #print(f"RUN_ID = {run_id}")
+        dbt_status = "SUCCESS"
 
         # Execute dbt
-        run_dbt(run_id)
+        try:
 
-        # Process run_results.json
-        stats = process_run_results(
+            run_dbt(run_id)
+
+        except subprocess.CalledProcessError:
+
+            dbt_failed = True
+
+        # vedno preberi run_results.json
+        proces_result = process_run_results(
             connection=connection,
             run_id=run_id,
             results_file="target/run_results.json"
         )
 
-        #print(stats)
+        stats = proces_result["stats"]
+        first_error = proces_result["first_error"]
+
+        #   določi končni status dbt izvajanja
+
+        if stats["failed"] > 0:
+            dbt_status = "FAILED"
+        else:
+            dbt_status = "SUCCESS"
 
         # Finish run
         finish_run(
             connection=connection,
             run_id=run_id,
-            status="SUCCESS"
+            status=dbt_status,
+            error_message=first_error
         )
 
-        #print("RUN SUCCESS")
+        # Če je eden od dbt padel,
+        # vrni napako šele po obdelavi rezultatov
+        #if dbt_failed:
+        #
+        #    raise RuntimeError(
+        #        "One or more dbt models failed"
+        #    )
+        if dbt_status == "SUCCESS":
+            print(f"RUN {run_id} completed successfully")
+        else:
+            print(f"RUN {run_id} completed with FAILED status")    
+            if first_error:
+                print(f"First error: {first_error}")
 
     except Exception as ex:
 
@@ -92,7 +120,8 @@ def main():
                 finish_run(
                     connection=connection,
                     run_id=run_id,
-                    status="FAILED"
+                    status="FAILED",
+                    error_message=first_error
                 )
 
             except Exception:

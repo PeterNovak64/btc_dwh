@@ -205,7 +205,7 @@ def fail_object_run(
 
 
 
-def start_run(connection, run_type="DBT"):
+def start_run(connection, run_type="DBT", run_name="DBT_FULL_RUN"):
     """
     Ustvari zapis v META.DWH_RUN
     in vrne RUN_ID.
@@ -244,7 +244,9 @@ def start_run(connection, run_type="DBT"):
 def finish_run(
         connection,
         run_id,
-        status):
+        status,
+        error_message=None
+    ):
     """
     Zaključi izvajanje v META.DWH_RUN.
     """
@@ -257,10 +259,12 @@ def finish_run(
             """
             EXEC META.finish_run
                  @run_id = ?,
-                 @status = ?
+                 @status = ?,
+                 @error_message = ?
             """,
             run_id,
-            status
+            status,
+            error_message
         )
 
         connection.commit()
