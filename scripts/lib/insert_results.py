@@ -56,6 +56,10 @@ def extract_result_data(result):
     # OBJECT_NAME
     unique_id = result.get("unique_id", "")
 
+    # zanimajo nas samo dbt modeli
+    if not unique_id.startswith("model."):
+        return None
+
     object_name = None
 
     if unique_id:
@@ -249,6 +253,9 @@ def process_run_results(
     for result in results:
 
         result_data = extract_result_data(result)
+
+        if result_data is None:
+            continue
 
         #print(
         #    f"RUN_ID={run_id}, "
