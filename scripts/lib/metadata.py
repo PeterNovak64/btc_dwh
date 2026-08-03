@@ -1,45 +1,105 @@
 #
-#   metadata.py
+#   scripts/lib/metadata.py
 #
 
 from lib.db import get_sqlserver_connection
 
-def refresh_source(connection):
 
-    cursor = connection.cursor()
+class MetadataService:
 
-    try:
+    def _execute_procedure(
+            self,
+            procedure_name,
+            params=None):
+        """
+        Izvede stored proceduro.
+        """
 
-        cursor.execute(
-            "EXEC META.refresh_source"
+        params = params or {}
+
+        conn = get_sqlserver_connection()
+
+        try:
+
+            cursor = conn.cursor()
+
+            if params:
+
+                parameter_list = ", ".join(
+                    f"@{key}=?"
+                    for key in params.keys()
+                )
+
+                sql = (
+                    f"EXEC {procedure_name} "
+                    f"{parameter_list}"
+                )
+
+                cursor.execute(
+                    sql,
+                    *params.values()
+                )
+
+            else:
+
+                sql = f"EXEC {procedure_name}"
+
+                cursor.execute(sql)
+
+            conn.commit()
+
+        finally:
+
+            cursor.close()
+            conn.close()
+
+    # --------------------------------------------------
+    # SOURCE METADATA
+    # --------------------------------------------------
+
+    def refresh_source(self):
+
+        self._execute_procedure(
+            "META.refresh_source"
         )
 
-        connection.commit()
+    # --------------------------------------------------
+    # PROFILE RULES
+    # --------------------------------------------------
 
-    finally:
+    def refresh_source_profile_rule(self):
 
-        cursor.close()
-
-
-def refresh_load_statistics(
-        connection,
-        run_id):
-
-    cursor = connection.cursor()
-
-    try:
-
-        cursor.execute(
-            """
-            EXEC META.refresh_load_statistics
-                 @run_id = ?
-            """,
-            run_id
+        self._execute_procedure(
+            "META.refresh_source_profile_rule"
         )
 
-        connection.commit()
+    # --------------------------------------------------
+    # DQ PROFILE
+    # --------------------------------------------------
 
-    finally:
+    def refresh_dq_profile(
+            self,
+            run_id):
 
-        cursor.close()
+        self._execute_procedure(
+            "META.refresh_dq_profile",
+            {
+                "run_id": run_id
+            }
+        )
 
+    # --------------------------------------------------
+    # LOAD STATISTICS
+    # --------------------------------------------------
+
+    def refresh_load_statistics(
+            self,
+            run_id):
+
+        self._execute_procedure(
+            "META.refresh_load_statistics",
+            {
+                "run_id": run_id
+            }
+        )
+        
