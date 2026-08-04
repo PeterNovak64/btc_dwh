@@ -1,17 +1,15 @@
 #
 #   scripts/orchestrator.py
 #
-#   Orchestrator for managing and executing data processing workflows
+#   BTC DWH Orchestrator
 #
-
-"""
-orchestrator.py
-
-Glavni orchestrator za dbt izvajanje.
-"""
 
 from pathlib import Path
 import subprocess
+import itertools
+import threading
+import time
+import argparse
 
 from lib.db import get_sqlserver_connection
 
@@ -24,11 +22,18 @@ from lib.insert_results import (
     process_run_results
 )
 
-import itertools
-import threading
-import time
-import re
+from lib.dq import (
+    process_dq_results
+)
 
+from lib.metadata import (
+    MetadataService
+)
+
+
+# ==========================================================
+# HELPERS
+# ==========================================================
 
 def format_duration(seconds):
 
@@ -39,7 +44,9 @@ def format_duration(seconds):
     return f"{h:02}:{m:02}:{s:02}"
 
 
-def model_spinner(stop_event, model_name):
+def model_spinner(
+        stop_event,
+        model_name):
 
     start_time = time.time()
 
@@ -48,27 +55,61 @@ def model_spinner(stop_event, model_name):
         if stop_event.is_set():
             break
 
-        elapsed = int(time.time() - start_time)
+        elapsed = int(
+            time.time() - start_time
+        )
 
         print(
-            f"\rRunning {model_name} ... {char} {format_duration(elapsed)}",
+            f"\rRunning {model_name} ... "
+            f"{char} "
+            f"{format_duration(elapsed)}",
             end="",
             flush=True
         )
 
         time.sleep(0.5)
 
-    print("\r" + " " * 120 + "\r", end="")
+    print(
+        "\r" + " " * 120 + "\r",
+        end=""
+    )
 
 
-def run_dbt(run_id):
+# ==========================================================
+# DBT
+# ==========================================================
+
+def run_dbt(
+        run_id,
+        dbt_command="run",
+        selector=None,
+        full_refresh=False):
 
     cmd = [
         "dbt",
-        "run",
+        dbt_command,
         "--vars",
         f"{{run_id: {run_id}}}"
     ]
+
+    if selector:
+
+        cmd.extend(
+            [
+                "--select",
+                selector
+            ]
+        )
+
+    if full_refresh:
+        cmd.append(
+            "--full-refresh"
+        )
+
+    print()
+    print("DBT COMMAND:")
+    print(" ".join(cmd))
+    print()
 
     process = subprocess.Popen(
         cmd,
@@ -85,9 +126,6 @@ def run_dbt(run_id):
 
         line = line.rstrip()
 
-        #
-        # START model
-        #
         if "START sql table model" in line:
 
             model_name = (
@@ -105,14 +143,16 @@ def run_dbt(run_id):
 
             spinner_thread = threading.Thread(
                 target=model_spinner,
-                args=(spinner_stop, model_name)
+                args=(
+                    spinner_stop,
+                    model_name
+                )
             )
 
             spinner_thread.start()
 
             continue
 
-        # model končan
         if (
             "OK created sql table model" in line
             or "ERROR creating sql table model" in line
@@ -128,98 +168,204 @@ def run_dbt(run_id):
 
             continue
 
-        # ostalo
         print(line)
 
-    return_code = process.wait()
-
-    return return_code
+    return process.wait()
 
 
+# ==========================================================
+# ARGUMENTS
+# ==========================================================
+
+def parse_arguments():
+
+    parser = argparse.ArgumentParser(
+        description="BTC DWH Orchestrator"
+    )
+
+    parser.add_argument(
+        "--load-selector",
+        required=True,
+        help="dbt selector za LAND"
+    )
+
+    parser.add_argument(
+        "--build-selector",
+        required=True,
+        help="dbt selector za BUILD"
+    )
+
+    parser.add_argument(
+        "--full-refresh",
+        action="store_true",
+        help="Uporabi --full-refresh"
+    )
+
+    return parser.parse_args()
+
+
+# ==========================================================
+# MAIN
+# ==========================================================
 
 def main():
 
+    args = parse_arguments()
+
     connection = None
     run_id = None
-    dbt_failed = False
+
+    metadata = MetadataService()
 
     try:
 
-        print("[1/5] Opening SQL connection")
+        # --------------------------------------------------
+        # SQL CONNECTION
+        # --------------------------------------------------
+
+        print("[1/12] Opening SQL connection")
 
         connection = get_sqlserver_connection()
 
-        print("[2/5] Starting DWH run")
+        # --------------------------------------------------
+        # START RUN
+        # --------------------------------------------------
 
-        # Start run
+        print("[2/12] Starting DWH run")
+
         run_id = start_run(
             connection=connection,
             run_type="DBT"
         )
 
-        print(f"        RUN_ID = {run_id}")
+        print(f"RUN_ID = {run_id}")
 
-        dbt_status = "SUCCESS"
+        # --------------------------------------------------
+        # LOAD
+        # --------------------------------------------------
 
-        print("[3/5] Executing dbt")
+        print("[3/12] Executing DBT LOAD")
 
-        # Execute dbt
-        try:
+        run_dbt(
+            run_id=run_id,
+            dbt_command="run",
+            selector=args.load_selector,
+            full_refresh=args.full_refresh
+        )
 
-            return_code = run_dbt(run_id)
+        # --------------------------------------------------
+        # LOAD RESULTS
+        # --------------------------------------------------
 
-            if return_code != 0:
-                dbt_failed = True
+        print("[4/12] Processing LOAD run_results.json")
 
-        except subprocess.CalledProcessError:
-
-            dbt_failed = True
-
-        print("[4/5] Processing run_results.json")
-
-        # vedno preberi run_results.json
-        proces_result = process_run_results(
+        process_run_results(
             connection=connection,
             run_id=run_id,
             results_file="target/run_results.json"
         )
 
-        stats = proces_result["stats"]
-        first_error = proces_result["first_error"]
+        # --------------------------------------------------
+        # SOURCE METADATA
+        # --------------------------------------------------
 
-        #   določi končni status dbt izvajanja
+        print("[5/12] Refresh source metadata")
 
-        if stats["failed"] > 0:
-            dbt_status = "FAILED"
-        else:
-            dbt_status = "SUCCESS"
+        metadata.refresh_source()
 
-        print("[5/5] Finalizing run")
+        # --------------------------------------------------
+        # SOURCE PROFILE RULES
+        # --------------------------------------------------
 
-        # Finish run
+        print("[6/12] Refresh source profile rules")
+
+        metadata.refresh_source_profile_rule()
+
+        # --------------------------------------------------
+        # DQ PROFILE
+        # --------------------------------------------------
+
+        print("[7/12] Refresh DQ profile")
+
+        metadata.refresh_dq_profile(
+            run_id=run_id
+        )
+
+        # --------------------------------------------------
+        # BUILD
+        # --------------------------------------------------
+
+        print("[8/12] Executing DBT BUILD")
+
+        run_dbt(
+            run_id=run_id,
+            dbt_command="build",
+            selector=args.build_selector
+        )
+
+        # --------------------------------------------------
+        # BUILD RESULTS
+        # --------------------------------------------------
+
+        print("[9/12] Processing BUILD run_results.json")
+
+        process_run_results(
+            connection=connection,
+            run_id=run_id,
+            results_file="target/run_results.json"
+        )
+
+        # --------------------------------------------------
+        # DQ RESULTS
+        # --------------------------------------------------
+
+        print("[10/12] Processing DQ results")
+
+        dq_stats = process_dq_results(
+            connection=connection,
+            run_id=run_id,
+            run_results_file="target/run_results.json",
+            manifest_file="target/manifest.json"
+        )
+
+        print(
+            f"DQ tests: "
+            f"{dq_stats['total']} "
+            f"(PASS={dq_stats['pass']}, "
+            f"FAIL={dq_stats['fail']}, "
+            f"WARN={dq_stats['warn']})"
+        )
+
+        # --------------------------------------------------
+        # LOAD STATISTICS
+        # --------------------------------------------------
+
+        print("[11/12] Refresh load statistics")
+
+        metadata.refresh_load_statistics(
+            run_id=run_id
+        )
+
+        # --------------------------------------------------
+        # FINISH
+        # --------------------------------------------------
+
+        print("[12/12] Finish run")
+
         finish_run(
             connection=connection,
             run_id=run_id,
-            status=dbt_status,
-            error_message=first_error
+            status="SUCCESS"
         )
 
-        # Če je eden od dbt padel,
-        # vrni napako šele po obdelavi rezultatov
-        if dbt_status == "SUCCESS":
-            print(f"RUN {run_id} completed successfully")
-        else:
-            print(f"RUN {run_id} completed with FAILED status")    
-            if first_error:
-                print(f"First error: {first_error}")
-
-            raise RuntimeError( first_error if first_error else "DBT run failed" )
+        print(
+            f"RUN {run_id} completed successfully"
+        )
 
     except Exception as ex:
 
         print(f"ERROR: {ex}")
 
-        # Mark run as failed
         if connection and run_id:
 
             try:
@@ -228,7 +374,7 @@ def main():
                     connection=connection,
                     run_id=run_id,
                     status="FAILED",
-                    error_message=first_error
+                    error_message=str(ex)
                 )
 
             except Exception:
