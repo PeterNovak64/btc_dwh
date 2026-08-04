@@ -223,7 +223,7 @@ def main():
         # SQL CONNECTION
         # --------------------------------------------------
 
-        print("[1/12] Opening SQL connection")
+        print("[1/13] Opening SQL connection")
 
         connection = get_sqlserver_connection()
 
@@ -231,7 +231,7 @@ def main():
         # START RUN
         # --------------------------------------------------
 
-        print("[2/12] Starting DWH run")
+        print("[2/13] Starting DWH run")
 
         run_id = start_run(
             connection=connection,
@@ -244,7 +244,7 @@ def main():
         # LOAD
         # --------------------------------------------------
 
-        print("[3/12] Executing DBT LOAD")
+        print("[3/13] Executing DBT LOAD")
 
         run_dbt(
             run_id=run_id,
@@ -257,19 +257,30 @@ def main():
         # LOAD RESULTS
         # --------------------------------------------------
 
-        print("[4/12] Processing LOAD run_results.json")
+        print("[4/13] Processing LOAD run_results.json")
 
-        process_run_results(
+        load_result = process_run_results(
             connection=connection,
             run_id=run_id,
             results_file="target/run_results.json"
+        )
+
+        load_stats = load_result["stats"]
+
+        print(
+            f"LOAD results: "
+            f"TOTAL={load_stats['total']}, "
+            f"SUCCESS={load_stats['success']}, "
+            f"FAILED={load_stats['failed']}, "
+            f"WARNING={load_stats['warning']}, "
+            f"SKIPPED={load_stats['skipped']}"
         )
 
         # --------------------------------------------------
         # SOURCE METADATA
         # --------------------------------------------------
 
-        print("[5/12] Refresh source metadata")
+        print("[5/13] Refresh source metadata")
 
         metadata.refresh_source()
 
@@ -277,7 +288,7 @@ def main():
         # SOURCE PROFILE RULES
         # --------------------------------------------------
 
-        print("[6/12] Refresh source profile rules")
+        print("[6/13] Refresh source profile rules")
 
         metadata.refresh_source_profile_rule()
 
@@ -285,17 +296,44 @@ def main():
         # DQ PROFILE
         # --------------------------------------------------
 
-        print("[7/12] Refresh DQ profile")
+        print("[7/13] Refresh DQ profile")
 
         metadata.refresh_dq_profile(
             run_id=run_id
         )
 
         # --------------------------------------------------
+        # DQ ALERT
+        # --------------------------------------------------
+
+        print("[8/13] Refresh DQ alerts")
+
+        dq_alert_stats = metadata.refresh_dq_alert(
+            run_id=run_id
+        )
+
+        if dq_alert_stats:
+
+            print(
+                f"DQ alerts: "
+                f"CURRENT={dq_alert_stats.get('CURRENT_VIOLATIONS', 0)}, "
+                f"NEW={dq_alert_stats.get('INSERTED_NEW_ALERTS', 0)}, "
+                f"UPDATED={dq_alert_stats.get('UPDATED_OPEN_ALERTS', 0)}, "
+                f"RESOLVED={dq_alert_stats.get('RESOLVED_ALERTS', 0)}, "
+                f"OPEN={dq_alert_stats.get('OPEN_ALERTS_AFTER_RUN', 0)}"
+            )
+
+        else:
+
+            print(
+                "DQ alerts: no summary returned"
+            )
+
+        # --------------------------------------------------
         # BUILD
         # --------------------------------------------------
 
-        print("[8/12] Executing DBT BUILD")
+        print("[9/13] Executing DBT BUILD")
 
         run_dbt(
             run_id=run_id,
@@ -307,19 +345,30 @@ def main():
         # BUILD RESULTS
         # --------------------------------------------------
 
-        print("[9/12] Processing BUILD run_results.json")
+        print("[10/13] Processing BUILD run_results.json")
 
-        process_run_results(
+        build_result = process_run_results(
             connection=connection,
             run_id=run_id,
             results_file="target/run_results.json"
+        )
+
+        build_stats = build_result["stats"]
+
+        print(
+            f"BUILD results: "
+            f"TOTAL={build_stats['total']}, "
+            f"SUCCESS={build_stats['success']}, "
+            f"FAILED={build_stats['failed']}, "
+            f"WARNING={build_stats['warning']}, "
+            f"SKIPPED={build_stats['skipped']}"
         )
 
         # --------------------------------------------------
         # DQ RESULTS
         # --------------------------------------------------
 
-        print("[10/12] Processing DQ results")
+        print("[11/13] Processing DBT DQ results")
 
         dq_stats = process_dq_results(
             connection=connection,
@@ -329,7 +378,7 @@ def main():
         )
 
         print(
-            f"DQ tests: "
+            f"DBT DQ tests: "
             f"{dq_stats['total']} "
             f"(PASS={dq_stats['pass']}, "
             f"FAIL={dq_stats['fail']}, "
@@ -340,7 +389,7 @@ def main():
         # LOAD STATISTICS
         # --------------------------------------------------
 
-        print("[11/12] Refresh load statistics")
+        print("[12/13] Refresh load statistics")
 
         metadata.refresh_load_statistics(
             run_id=run_id
@@ -350,7 +399,7 @@ def main():
         # FINISH
         # --------------------------------------------------
 
-        print("[12/12] Finish run")
+        print("[13/13] Finish run")
 
         finish_run(
             connection=connection,
@@ -390,3 +439,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

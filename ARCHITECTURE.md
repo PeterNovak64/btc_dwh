@@ -32,6 +32,7 @@ The orchestrator script coordinates dbt execution, metadata refreshes, and resul
     - `META.refresh_source`
     - `META.refresh_source_profile_rule`
     - `META.refresh_dq_profile`
+    - `META.refresh_dq_alert`
     - `META.refresh_load_statistics`
 
 - `scripts/lib/db.py`
@@ -86,13 +87,15 @@ flowchart TD
 2. `start_run` creates a run record in `META.DWH_RUN`.
 3. `dbt run` executes load models with `--vars {run_id: ...}`.
 4. `process_run_results` reads `target/run_results.json` and updates `META.DWH_RUN_OBJECT`.
-5. `MetadataService` refreshes source metadata and profile rules.
-6. `MetadataService.refresh_dq_profile` invokes DBT-driven data quality profile refresh.
-7. `dbt build` executes build models.
-8. `process_run_results` reads the newer `target/run_results.json` and updates `META.DWH_RUN_OBJECT` again.
-9. `process_dq_results` reads `target/run_results.json` and `target/manifest.json` and inserts quality test results into `META.DQ_RESULT`.
-10. `MetadataService.refresh_load_statistics` refreshes load metrics.
-11. `finish_run` writes final run status back to `META.DWH_RUN`.
+5. `MetadataService.refresh_source` refreshes source metadata.
+6. `MetadataService.refresh_source_profile_rule` refreshes source profile rules.
+7. `MetadataService.refresh_dq_profile` invokes DBT-driven data quality profile refresh.
+8. `MetadataService.refresh_dq_alert` reconciles data quality alerts in `META.DQ_ALERT`.
+9. `dbt build` executes build models.
+10. `process_run_results` reads the newer `target/run_results.json` and updates `META.DWH_RUN_OBJECT` again.
+11. `process_dq_results` reads `target/run_results.json` and `target/manifest.json` and inserts quality test results into `META.DQ_RESULT`.
+12. `MetadataService.refresh_load_statistics` refreshes load metrics.
+13. `finish_run` writes final run status back to `META.DWH_RUN`.
 
 ## Notes
 

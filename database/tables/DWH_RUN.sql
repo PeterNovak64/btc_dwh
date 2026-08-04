@@ -1,4 +1,24 @@
 
+/*******************************************************************************
+ * Table: META.DWH_RUN
+ * Description:
+ *   Stores metadata for DWH runs, including run type, status, timing,
+ *   error details, and dbt invocation information.
+ *
+ * Columns:
+ *   RUN_ID              BIGINT IDENTITY(1,1) PRIMARY KEY
+ *   RUN_TYPE            run type identifier, e.g. 'DBT'
+ *   STATUS              run state, default 'RUNNING'
+ *   START_TS            run start timestamp, default sysdatetime()
+ *   END_TS              run end timestamp
+ *   DURATION_SEC        elapsed duration in seconds
+ *   DBT_INVOCATION_ID   optional dbt invocation identifier
+ *   CREATED_BY          user name that created the run record
+ *   ERROR_MESSAGE       optional error details
+ *   RUN_NAME            optional run name
+ *
+ * This script drops the existing table and recreate it with its constraints.
+ *******************************************************************************/
 ALTER TABLE [META].[DWH_RUN] DROP CONSTRAINT [DF_DHW_RZN_CREATED_BY]
 GO
 
