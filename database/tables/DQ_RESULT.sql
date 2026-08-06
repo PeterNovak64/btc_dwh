@@ -1,4 +1,24 @@
 
+/*******************************************************************************
+ * Table: META.DQ_RESULT
+ * Description:
+ *   Stores dbt and data quality test results generated during runs.
+ *   Each row captures the outcome of a test execution, including timing,
+ *   object context, failure count, and error details.
+ *
+ * Columns:
+ *   DQ_RESULT_ID   result surrogate key
+ *   RUN_ID         execution run reference
+ *   TEST_TS        test execution timestamp
+ *   MODEL_NAME     model or source object name under test
+ *   TEST_NAME      test identifier or description
+ *   TEST_STATUS    pass/fail status for the test
+ *   FAILED_ROWS    count of failed rows when the test failed
+ *   ERROR_TEXT     optional failure details or error message
+ *   TEST_TYPE      optional test type or category
+ *   COLUMN_NAME    optional column-specific test target
+ *******************************************************************************/
+
 ALTER TABLE [META].[DQ_RESULT] DROP CONSTRAINT [DF__DQ_RESULT__TEST___5EBF139D]
 GO
 

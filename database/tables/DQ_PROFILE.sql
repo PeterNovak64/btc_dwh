@@ -1,3 +1,26 @@
+/*******************************************************************************
+ * Table: META.DQ_PROFILE
+ * Description:
+ *   Stores profiling results for source objects and profile rules.
+ *   Each row captures a metric value observed during a run and links back
+ *   to the source object, rule, and run context.
+ *
+ * Columns:
+ *   PROFILE_ID            profile row surrogate key
+ *   RUN_ID                execution run reference
+ *   RULE_ID               profile rule reference
+ *   OBJECT_ID             source object reference
+ *   OBJECT_NAME           source object name at time of profiling
+ *   COLUMN_NAME           optional target column name
+ *   RULE_SCOPE            profile rule scope, either COLUMN or OBJECT
+ *   RULE_TYPE             profile rule type
+ *   RULE_NAME             profile rule name
+ *   RULE_ORDER            optional rule order for evaluation
+ *   PROFILE_VALUE_NUMERIC numeric profile result value
+ *   PROFILE_VALUE_TEXT    textual profile result value
+ *   PROFILE_UNIT          unit for the profile value
+ *   PROFILE_TS            profile timestamp
+ *******************************************************************************/
 
 ALTER TABLE [META].[DQ_PROFILE] DROP CONSTRAINT [CK_DQ_PROFILE_RULE_TYPE]
 GO

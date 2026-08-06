@@ -1,4 +1,20 @@
 
+/*******************************************************************************
+ * Table: META.SOURCE_STRUCTURE
+ * Description:
+ *   Stores the structure of source object columns used for schema tracking.
+ *   Each row contains the column signature, ordinal position, and the time
+ *   the structure was detected for a source object.
+ *
+ * Columns:
+ *   OBJECT_ID             reference to META.SOURCE_OBJECT
+ *   COLUMN_NAME           source column name
+ *   ORDINAL_POSITION      column ordinal position
+ *   COLUMN_SIGNATURE      detailed column signature
+ *   COLUMN_SIGNATURE_HASH optional signature hash for change detection
+ *   DETECTED_TS           timestamp when the structure was detected
+ *******************************************************************************/
+
 ALTER TABLE [META].[SOURCE_STRUCTURE] DROP CONSTRAINT [FK_SOURCE_STRUCTURE_OBJECT]
 GO
 

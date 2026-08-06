@@ -1,3 +1,25 @@
+/*******************************************************************************
+ * Table: META.SOURCE_OBJECT
+ * Description:
+ *   Tracks source objects for the data quality and metadata processes.
+ *   Stores object catalog details, structure hash, last-seen timestamps, and
+ *   creation metadata for source objects ingested into the system.
+ *
+ * Columns:
+ *   OBJECT_ID                 unique object identifier
+ *   SOURCE_SYSTEM             source system name
+ *   SERVER_NAME               optional server host name
+ *   DATABASE_NAME             optional database name
+ *   SCHEMA_NAME               optional schema name
+ *   OBJECT_NAME               object name
+ *   LAND_OBJECT_NAME          normalized land object name
+ *   OBJECT_TYPE               type of source object
+ *   STATUS                    current object status
+ *   LAST_STRUCTURE_HASH       optional structure hash used for change detection
+ *   LAST_SEEN_TS              optional last seen timestamp
+ *   LAST_STRUCTURE_CHANGE_TS  optional structure change timestamp
+ *   CREATED_TS                record creation timestamp
+ *******************************************************************************/
 
 ALTER TABLE [META].[SOURCE_OBJECT] DROP CONSTRAINT [DF_SOURCE_OBJECT_CREATED_TS]
 GO
@@ -28,6 +50,7 @@ CREATE TABLE [META].[SOURCE_OBJECT](
 	[LAST_SEEN_TS] [datetime2](0) NULL,
 	[LAST_STRUCTURE_CHANGE_TS] [datetime2](0) NULL,
 	[CREATED_TS] [datetime2](0) NOT NULL,
+	[BUSINESS_DOMAIN_ID] BIGINT NULL,
  CONSTRAINT [PK_SOURCE_OBJECT] PRIMARY KEY CLUSTERED 
 (
 	[OBJECT_ID] ASC
@@ -46,4 +69,12 @@ GO
 ALTER TABLE [META].[SOURCE_OBJECT] ADD  CONSTRAINT [DF_SOURCE_OBJECT_CREATED_TS]  DEFAULT (sysdatetime()) FOR [CREATED_TS]
 GO
 
+ALTER TABLE META.SOURCE_OBJECT
+ADD CONSTRAINT FK_SOURCE_OBJECT_BUSINESS_DOMAIN
+	FOREIGN KEY (    BUSINESS_DOMAIN_ID)
+	REFERENCES META.BUSINESS_DOMAIN(    BUSINESS_DOMAIN_ID);
+GO
 
+CREATE INDEX IX_SOURCE_OBJECT_BUSINESS_DOMAIN
+ON META.SOURCE_OBJECT(    BUSINESS_DOMAIN_ID);
+GO

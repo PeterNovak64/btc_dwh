@@ -1,4 +1,24 @@
 
+/*******************************************************************************
+ * Table: META.DWH_RUN_OBJECT
+ * Description:
+ *   Stores execution status and timing for individual objects within a run.
+ *   Tracks object layer, object name, start/end timestamps, duration, status,
+ *   row count, and failure details for run-level monitoring.
+ *
+ * Columns:
+ *   RUN_OBJECT_ID   unique run object identifier
+ *   RUN_ID          reference to META.DWH_RUN
+ *   OBJECT_LAYER    object layer such as META, MART, DWH, STAG, LAND
+ *   OBJECT_NAME     object name within the run
+ *   START_TS        execution start timestamp
+ *   END_TS          execution end timestamp
+ *   DURATION_SEC    elapsed duration in seconds
+ *   STATUS          current object run status
+ *   ROW_COUNT       optional row count for the object
+ *   ERROR_MESSAGE   optional error message when execution fails
+ *******************************************************************************/
+
 ALTER TABLE [META].[DWH_RUN_OBJECT] DROP CONSTRAINT [CK_DWH_RUN_OBJECT_STATUS]
 GO
 

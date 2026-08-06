@@ -1,4 +1,19 @@
 
+/*******************************************************************************
+ * Table: META.LOAD_STATISTICS
+ * Description:
+ *   Stores load statistics for each object and layer during run execution.
+ *   Includes row counts and load timestamp for monitoring and reporting.
+ *
+ * Columns:
+ *   STAT_ID       unique load statistic identifier
+ *   RUN_ID        execution run reference
+ *   LAYER_NAME    layer name such as META, MART, DWH, STAG, LAND
+ *   OBJECT_NAME   name of the loaded object
+ *   ROW_COUNT     number of rows loaded
+ *   LOAD_TS       load timestamp
+ *******************************************************************************/
+
 /****** Object:  Table [META].[LOAD_STATISTICS]    Script Date: 4. 08. 2026 09:48:17 ******/
 IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[META].[LOAD_STATISTICS]') AND type in (N'U'))
 DROP TABLE [META].[LOAD_STATISTICS]

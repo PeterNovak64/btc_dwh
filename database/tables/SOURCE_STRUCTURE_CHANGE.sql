@@ -1,4 +1,22 @@
 
+/*******************************************************************************
+ * Table: META.SOURCE_STRUCTURE_CHANGE
+ * Description:
+ *   Records detected structural changes for source object columns.
+ *   Each row captures the change type, old/new signatures, and the time
+ *   the change was detected for source object metadata tracking.
+ *
+ * Columns:
+ *   CHANGE_ID      unique change event identifier
+ *   OBJECT_ID      reference to META.SOURCE_OBJECT
+ *   ORDINAL_POSITION optional column position at the time of detection
+ *   COLUMN_NAME    column name for the changed column
+ *   DETECTED_TS    timestamp when the change was detected
+ *   CHANGE_TYPE    type of schema change detected
+ *   OLD_SIGNATURE  previous column signature
+ *   NEW_SIGNATURE  new column signature
+ *******************************************************************************/
+
 ALTER TABLE [META].[SOURCE_STRUCTURE_CHANGE] DROP CONSTRAINT [CK_SOURCE_STRUCTURE_CHANGE_TYPE]
 GO
 
