@@ -1,4 +1,13 @@
-select t1.NO,
+--
+-- model: land_tsspica_users
+-- description: This model is a landing table for tsspica_users data. It selects all columns from the tsspica_users source table and prepares it for further transformations.
+--  
+
+
+select 'TSSPICA' as LND_SRC_SYSTEM,
+        SYSDATETIME() AS LND_LOAD_TS,
+        {{ var('run_id') }} AS LND_RUN_ID,
+        t1.NO,
         t1.LASTNAME,
         t1.FIRSTNAME,
         t1.ADDRESS,
@@ -52,7 +61,5 @@ select t1.NO,
         t1.INTERNAL_FIELD_3,
         t1.INTERNAL_FIELD_4,
         t1.INTERNAL_FIELD_5,
-        t1.ACTIVE,
-        'TSSPICA' as SRC_SYSTEM,
-        GETDATE() as LOAD_TS
+        t1.ACTIVE
     from [BTCSQL01\BTC].[TSSPICA].[dbo].[USERS] t1

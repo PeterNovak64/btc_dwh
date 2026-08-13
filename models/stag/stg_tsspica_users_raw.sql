@@ -1,3 +1,8 @@
+--
+-- model: stg_tsspica_users_raw
+-- description: This model is a staging table for tsspica_users data. It selects only used columns from the tsspica_users source table and prepares it for further transformations.
+--
+
 SELECT  LND_SRC_SYSTEM,
         LND_LOAD_TS,
         LND_RUN_ID,
@@ -21,4 +26,4 @@ SELECT  LND_SRC_SYSTEM,
         ADDITIONAL_FIELD_2,
         BLOCKED,
         ACTIVE
-    FROM {{ ref('stg_tsspica_users_raw') }};
+    FROM {{ ref('tsspica_users') }};
