@@ -1,65 +1,24 @@
 --
--- model: land_tsspica_users
--- description: This model is a landing table for tsspica_users data. It selects all columns from the tsspica_users source table and prepares it for further transformations.
---  
+-- model: tsspica_users
+--
+-- description: Landing table for tsspica_users data.
+--              sync_structure mode creates/synchronizes the LAND structure.
+--              Normal mode loads columns defined by source metadata.
+--
 
+select
+    'TSSPICA' as LND_SRC_SYSTEM,
+    SYSDATETIME() AS LND_LOAD_TS,
+    {{ var('run_id') }} AS LND_RUN_ID,
 
-select 'TSSPICA' as LND_SRC_SYSTEM,
-        SYSDATETIME() AS LND_LOAD_TS,
-        {{ var('run_id') }} AS LND_RUN_ID,
-        t1.NO,
-        t1.LASTNAME,
-        t1.FIRSTNAME,
-        t1.ADDRESS,
-        t1.CITY,
-        t1.STATE,
-        t1.PHONE,
-        t1.MOBILEPHONE,
-        t1.FAX,
-        t1.ID,
-        t1.BIRTH,
-        t1.OCCUPATION,
-        t1.BDGNO,
-        t1.COMPANY,
-        t1.DEPARTMENT,
-        t1.SUBDEPARTMENT,
-        t1.DIVISION,
-        t1.HOST,
-        --t1.PICTURE,   -- not included because it is a binary field
-        t1.EMAIL,
-        t1.PIN,
-        t1.BDGCHANGEDON,
-        t1.OTHER,
-        t1.WS_KIND,
-        t1.EMPGROUP,
-        t1.WAS_ACCESSIBLE,
-        t1.WEBDOG,
-        t1.ORGNO,
-        t1.FVU_STORAGE,
-        t1.MESSAGE,
-        t1.BLACKLIST,
-        t1.DOX_SETTINGS,
-        t1.MIDDLENAME,
-        t1.LDAP_ACCOUNT_LOGIN_NAME,
-        t1.WILD_CARD_STATUS,
-        t1.ADVANCED_ACCESS_DATA,
-        t1.ADDITIONAL_FIELD_1,
-        t1.ADDITIONAL_FIELD_2,
-        t1.ADDITIONAL_FIELD_3,
-        t1.ADDITIONAL_FIELD_4,
-        t1.ADDITIONAL_FIELD_5,
-        t1.BLOCKED,
-        t1.ADDITIONAL_FIELD_6,
-        t1.ADDITIONAL_FIELD_7,
-        t1.ADDITIONAL_FIELD_8,
-        t1.ADDITIONAL_FIELD_9,
-        t1.ADDITIONAL_FIELD_10,
-        t1.NEW_USER_ID,
-        t1.APPROVER,
-        t1.INTERNAL_FIELD_1,
-        t1.INTERNAL_FIELD_2,
-        t1.INTERNAL_FIELD_3,
-        t1.INTERNAL_FIELD_4,
-        t1.INTERNAL_FIELD_5,
-        t1.ACTIVE
-    from [BTCSQL01\BTC].[TSSPICA].[dbo].[USERS] t1
+    {% if var('sync_structure', false) %}
+        t1.*
+    {% else %}
+        {{ ingestion_columns('tsspica_users') }}
+    {% endif %}
+
+from [BTCSQL01\BTC].[TSSPICA].[dbo].[USERS] t1
+
+{% if var('sync_structure', false) %}
+    WHERE 1 = 0
+{% endif %}
