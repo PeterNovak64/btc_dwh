@@ -35,7 +35,7 @@ from lib.metadata import (
 # HELPERS
 # ==========================================================
 
-def model_spinner(stop_event, model_name):
+def spinner( stop_event, operation_name ):
 
     start_time = time.time()
 
@@ -47,7 +47,7 @@ def model_spinner(stop_event, model_name):
         elapsed = time.time() - start_time
 
         print(
-            f"\rRunning {model_name} ... "
+            f"\rRunning {operation_name} ... "
             f"{char} "
             f"{elapsed:.2f}s",
             end="",
@@ -61,6 +61,25 @@ def model_spinner(stop_event, model_name):
         end=""
     )
 
+
+def print_status_line(
+        message,
+        status,
+        duration):
+
+    width = 89
+
+    suffix = f"[{status} in {duration:.2f}s]"
+
+    dots = "." * max(
+        1,
+        width - len(message)
+    )
+
+    print(
+        f"{message} {dots} {suffix}"
+    )
+    
 
 def run_operation(
         function,
@@ -83,7 +102,7 @@ def run_operation(
     stop_event = threading.Event()
 
     spinner_thread = threading.Thread(
-        target=operation_spinner,
+        target=spinner,
         args=(stop_event, message)
     )
 
@@ -103,10 +122,11 @@ def run_operation(
         stop_event.set()
         spinner_thread.join()
 
-        print(
-            f"{message} ... OK [{duration:.2f}s]"
+        print_status_line(
+            message,
+            "OK",
+            duration
         )
-
         return result
 
     except Exception:
@@ -116,34 +136,14 @@ def run_operation(
         stop_event.set()
         spinner_thread.join()
 
-        print(
-            f"{message} ... ERROR [{duration:.2f}s]"
+        print_status_line(
+            message,
+            "ERROR",
+            duration
         )
 
         raise
 
-
-def operation_spinner(
-        stop_event,
-        message):
-
-    for char in itertools.cycle("|/-\\"):
-
-        if stop_event.is_set():
-            break
-
-        print(
-            f"\r{message} ... {char}",
-            end="",
-            flush=True
-        )
-
-        time.sleep(0.5)
-
-    print(
-        "\r" + " " * 120 + "\r",
-        end=""
-    )
 
 
 # ==========================================================
@@ -218,7 +218,7 @@ def run_dbt(
             spinner_stop = threading.Event()
 
             spinner_thread = threading.Thread(
-                target=model_spinner,
+                target=spinner,
                 args=(
                     spinner_stop,
                     model_name
@@ -282,12 +282,16 @@ def run_dbt_step(
         duration = time.time() - start_time
 
         if return_code == 0:
-            print(
-                f"{message} ... OK [{duration:.2f}s]"
+            print_status_line(
+                message,
+                "OK",
+                duration
             )
         else:
-            print(
-                f"{message} ... ERROR [{duration:.2f}s]"
+            print_status_line(
+                message,
+                "ERROR",
+                duration
             )
 
         return return_code
@@ -353,6 +357,8 @@ def main():
         # SQL CONNECTION
         # --------------------------------------------------
 
+        print("[1/16] Opening SQL connection")
+
         connection = run_operation(
             get_sqlserver_connection,
             "Opening SQL connection"
@@ -361,6 +367,8 @@ def main():
         # --------------------------------------------------
         # START RUN
         # --------------------------------------------------
+
+        print("[2/16] Starting DWH run")
 
         run_id = run_operation(
             start_run,
@@ -374,6 +382,8 @@ def main():
         # --------------------------------------------------
         # LAND STRUCTURE SYNCHRONIZATION
         # --------------------------------------------------
+
+        print("[3/16] Executing DBT LAND structure synchronization")
 
         sync_return_code = run_dbt_step(
             "Executing DBT LAND structure synchronization",
@@ -427,23 +437,25 @@ def main():
 
         run_operation(
             metadata.refresh_source,
-            "Refreshing source metadata"
+            "Source metadata"
         )
 
         # --------------------------------------------------
         # SOURCE PROFILE RULES
         # --------------------------------------------------
 
-        print("[6/16] Refresh source profile rules")
+        print("[6/16] Source profile rules")
 
         run_operation(
             metadata.refresh_source_profile_rule,
-            "Refreshing source profile rules"
+            "Source profile rules"
         )
 
         # --------------------------------------------------
         # LOAD LAND
         # --------------------------------------------------
+
+        print("[7/16] Executing DBT LAND load")
 
         load_return_code = run_dbt_step(
             "Executing DBT LAND load",
@@ -497,7 +509,7 @@ def main():
 
         run_operation(
             metadata.refresh_dq_profile,
-            "Refreshing DQ profile",
+            "DQ profile",
             run_id=run_id
         )
 
@@ -509,7 +521,7 @@ def main():
 
         dq_alert_stats = run_operation(
             metadata.refresh_dq_alert,
-            "Refreshing DQ alerts",
+            "DQ alerts",
             run_id=run_id
         )
 
@@ -533,6 +545,8 @@ def main():
         # --------------------------------------------------
         # BUILD
         # --------------------------------------------------
+
+        print("[11/16] Executing DBT BUILD")
 
         build_return_code = run_dbt_step(
             "Executing DBT BUILD",
