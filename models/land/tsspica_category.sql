@@ -18,6 +18,13 @@ select
     {% endif %}
 
 from [BTCSQL01\BTC].[TSSPICA].[dbo].[CATEGORY] t1
+
 {% if var('sync_structure', false) %}
+
     WHERE 1 = 0
+
+{% else %}
+
+    {{ ingestion_filter('tsspica_category') }}
+
 {% endif %}

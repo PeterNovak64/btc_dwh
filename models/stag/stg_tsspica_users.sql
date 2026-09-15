@@ -1,24 +1,9 @@
-SELECT  LND_SRC_SYSTEM,
-        LND_LOAD_TS,
-        LND_RUN_ID,
-        NO,
-        LASTNAME,
-        FIRSTNAME,
-        ADDRESS,
-        CITY,
-        STATE,
-        PHONE,
-        MOBILEPHONE, 
-        FAX, 
-        ID, 
-        DEPARTMENT,
-        SUBDEPARTMENT,
-        DIVISION,
-        HOST,
-        EMAIL,
-        ORGNO,
-        ADDITIONAL_FIELD_1,
-        ADDITIONAL_FIELD_2,
-        BLOCKED,
-        ACTIVE
-    FROM {{ ref('stg_tsspica_users_raw') }};
+--
+-- model: STG_TSSPICA_USERS
+--
+-- description: Technical standardization of TSSPICA_users data.
+--
+
+select
+    {{ stg_columns('tsspica_users') }}
+from {{ ref('tsspica_users') }} t1

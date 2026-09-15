@@ -12,13 +12,23 @@ select
     {{ var('run_id') }} AS LND_RUN_ID,
 
     {% if var('sync_structure', false) %}
+
         t1.*
+
     {% else %}
+
         {{ ingestion_columns('tsspica_analytics_daily_categories') }}
+
     {% endif %}
 
 from [BTCSQL01\BTC].[TSSPICA].[dbo].[ANALYTICS_DAILY_CATEGORIES] t1
 
 {% if var('sync_structure', false) %}
+
     WHERE 1 = 0
+
+{% else %}
+
+    {{ ingestion_filter('tsspica_analytics_daily_categories') }}
+
 {% endif %}

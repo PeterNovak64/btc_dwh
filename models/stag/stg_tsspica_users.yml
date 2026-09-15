@@ -12,12 +12,12 @@ models:
           - not_null
           - unique
 
-      - name: LASTNAME
+      - name: LAST_NAME
         description: Priimek uporabnika
         tests:
           - not_null
 
-      - name: FIRSTNAME
+      - name: FIRST_NAME
         description: Ime uporabnika
         tests:
           - not_null

@@ -20,5 +20,11 @@ select
 from [BTCSQL01\BTC].[TSSPICA].[dbo].[ANALYTICS_DAILY] t1
 
 {% if var('sync_structure', false) %}
+
     WHERE 1 = 0
+
+{% else %}
+
+    {{ ingestion_filter('tsspica_analytics_daily') }}
+
 {% endif %}
