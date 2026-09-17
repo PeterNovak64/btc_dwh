@@ -561,10 +561,22 @@ def main():
             )
 
         # --------------------------------------------------
+        # DWH OBJECT METADATA
+        # --------------------------------------------------
+
+        print("[12/17] Refreshing DWH object metadata")
+
+        run_operation(
+            metadata.refresh_dwh_objects,
+            "Refreshing DWH object metadata",
+            manifest_file="target/manifest.json"
+        )
+
+        # --------------------------------------------------
         # BUILD RESULTS
         # --------------------------------------------------
 
-        print("[12/16] Processing BUILD run_results.json")
+        print("[13/17] Processing BUILD run_results.json")
 
         build_result = run_operation(
             process_run_results,
@@ -594,7 +606,7 @@ def main():
         # DQ RESULTS
         # --------------------------------------------------
 
-        print("[13/16] Processing DBT DQ results")
+        print("[14/17] Processing DBT DQ results")
 
         dq_stats = run_operation(
             process_dq_results,
@@ -617,7 +629,7 @@ def main():
         # LOAD STATISTICS
         # --------------------------------------------------
 
-        print("[14/16] Refresh load statistics")
+        print("[15/17] Refresh load statistics")
 
         run_operation(
             metadata.refresh_load_statistics,
@@ -629,7 +641,7 @@ def main():
         # FINISH
         # --------------------------------------------------
 
-        print("[15/16] Finish run")
+        print("[16/17] Finish run")
 
         run_operation(
             finish_run,
@@ -643,7 +655,7 @@ def main():
             f"RUN {run_id} completed successfully"
         )
 
-        print("[16/16] Done")
+        print("[17/17] Done")
 
     except Exception as ex:
 
