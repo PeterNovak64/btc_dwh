@@ -357,7 +357,7 @@ def main():
         # SQL CONNECTION
         # --------------------------------------------------
 
-        print("[1/16] Opening SQL connection")
+        print("[1/17] Opening SQL connection")
 
         connection = run_operation(
             get_sqlserver_connection,
@@ -368,7 +368,7 @@ def main():
         # START RUN
         # --------------------------------------------------
 
-        print("[2/16] Starting DWH run")
+        print("[2/17] Starting DWH run")
 
         run_id = run_operation(
             start_run,
@@ -383,7 +383,7 @@ def main():
         # LAND STRUCTURE SYNCHRONIZATION
         # --------------------------------------------------
 
-        print("[3/16] Executing DBT LAND structure synchronization")
+        print("[3/17] Executing DBT LAND structure synchronization")
 
         sync_return_code = run_dbt_step(
             "Executing DBT LAND structure synchronization",
@@ -403,7 +403,7 @@ def main():
         # STRUCTURE SYNC RESULTS
         # --------------------------------------------------
 
-        print("[4/16] Processing structure synchronization run_results.json")
+        print("[4/17] Processing structure synchronization run_results.json")
 
         sync_result = run_operation(
             process_run_results,
@@ -433,7 +433,7 @@ def main():
         # SOURCE METADATA
         # --------------------------------------------------
 
-        print("[5/16] Refresh source metadata")
+        print("[5/17] Refresh source metadata")
 
         run_operation(
             metadata.refresh_source,
@@ -444,7 +444,7 @@ def main():
         # SOURCE PROFILE RULES
         # --------------------------------------------------
 
-        print("[6/16] Source profile rules")
+        print("[6/17] Source profile rules")
 
         run_operation(
             metadata.refresh_source_profile_rule,
@@ -455,7 +455,7 @@ def main():
         # LOAD LAND
         # --------------------------------------------------
 
-        print("[7/16] Executing DBT LAND load")
+        print("[7/17] Executing DBT LAND load")
 
         load_return_code = run_dbt_step(
             "Executing DBT LAND load",
@@ -475,7 +475,7 @@ def main():
         # LOAD RESULTS
         # --------------------------------------------------
 
-        print("[8/16] Processing LOAD run_results.json")
+        print("[8/17] Processing LOAD run_results.json")
 
         load_result = run_operation(
             process_run_results,
@@ -505,7 +505,7 @@ def main():
         # DQ PROFILE
         # --------------------------------------------------
 
-        print("[9/16] Refresh DQ profile")
+        print("[9/17] Refresh DQ profile")
 
         run_operation(
             metadata.refresh_dq_profile,
@@ -517,7 +517,7 @@ def main():
         # DQ ALERT
         # --------------------------------------------------
 
-        print("[10/16] Refresh DQ alerts")
+        print("[10/17] Refresh DQ alerts")
 
         dq_alert_stats = run_operation(
             metadata.refresh_dq_alert,
@@ -546,7 +546,7 @@ def main():
         # BUILD
         # --------------------------------------------------
 
-        print("[11/16] Executing DBT BUILD")
+        print("[11/17] Executing DBT BUILD")
 
         build_return_code = run_dbt_step(
             "Executing DBT BUILD",
@@ -659,7 +659,11 @@ def main():
 
     except Exception as ex:
 
-        print(f"ERROR: {ex}")
+        print()
+        print("=" * 80)
+        print("FATAL ERROR")
+        print("=" * 80)
+        print(f"{type(ex).__name__}: {ex}")
 
         if connection and run_id:
 
@@ -672,9 +676,26 @@ def main():
                     error_message=str(ex)
                 )
 
-            except Exception:
-                pass
+            except Exception as finish_ex:
 
+                print()
+                print("=" * 80)
+                print("ERROR WHILE FINISHING DWH RUN")
+                print("=" * 80)
+                print(
+                    f"{type(finish_ex).__name__}: "
+                    f"{finish_ex}"
+                )
+
+                # Izpišemo celoten traceback sekundarne napake.
+                traceback.print_exc()
+
+        # Pomembno:
+        # originalna napaka se ponovno sproži.
+        #
+        # Python bo zato na koncu terminala izpisal njen
+        # celoten traceback in proces bo končal z non-zero
+        # exit code.
         raise
 
     finally:

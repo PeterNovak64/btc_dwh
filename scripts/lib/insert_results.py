@@ -113,20 +113,6 @@ def extract_result_data(result):
         4
     )
 
-    # END_TS
-    end_ts = None
-
-    timing = result.get("timing", [])
-
-    if timing:
-
-        last_timing = timing[-1]
-
-        end_ts = (
-            last_timing.get("completed_at")
-            or last_timing.get("ended_at")
-        )
-
     # ROW_COUNT
     adapter_response = result.get(
         "adapter_response",
@@ -162,7 +148,6 @@ def extract_result_data(result):
         "object_name": object_name,
         "status": status,
         "duration_sec": duration_sec,
-        "end_ts": end_ts,
         "row_count": row_count,
         "error_message": error_message
     }
@@ -179,7 +164,7 @@ def update_object_result(
     
     sql = """
     UPDATE META.DWH_RUN_OBJECT
-       SET END_TS        = ?,
+       SET END_TS        = SYSDATETIME(),
            DURATION_SEC  = ?,
            STATUS        = ?,
            ROW_COUNT     = COALESCE(?, ROW_COUNT),
@@ -191,7 +176,6 @@ def update_object_result(
     """
 
     params = (
-        result_data["end_ts"],
         result_data["duration_sec"],
         result_data["status"],
         result_data["row_count"],
